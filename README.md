@@ -33,11 +33,11 @@ The annotation file should have a gene feature row present in it.
 
 Given a bam file and an annotation file, the simplest way to run the script is
 
-    tin --ann data/ann.gtf data/sample.bam 
+    tincheck tin --ann data/ann.gtf data/sample.bam 
 
 **How to calculate TIN across coding regions of a gene?**
     
-    tin --ann data/ann.gtf --feat CDS data/sample.bam 
+    tincheck tin  --ann data/ann.gtf --feat CDS data/sample.bam 
  
  
 **Using pseudobam files**
@@ -50,7 +50,7 @@ is not required to run the script.
 
 **Available options**
 
-`--ann` Annotation file GTF format.
+`--ann` Annotation file GTF/GFF3 format.
 
 `--feat` Subfeature that is grouped together to compute TIN. It should match the 3rd column in annotation file.
          Default is exon.
@@ -78,7 +78,7 @@ TO Do: add formula  here.
 
 Transcript overlaps are flagged using `overlap.py` script.
 
-	overlap --ann data/ann.gtf data/sample.bam >sample_overlap.txt
+	tincheck overlap --ann data/ann.gtf data/sample.bam >sample_overlap.txt
 
 Genes are checked for runins only if 
 
