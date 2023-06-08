@@ -419,7 +419,7 @@ def get_depth(bam, bed, strand='reverse', flag=""):
     return outfile
 
 
-def get_gene_tin(bam, bed, strand, bgfile="", size=50, flag=""):
+def get_obs_tin(bam, bed, strand, bgfile="", size=50, flag=""):
     # Get depth for each position in each gene.
     depth_file = get_depth(bam, bed, strand, flag=flag)
 
@@ -428,9 +428,7 @@ def get_gene_tin(bam, bed, strand, bgfile="", size=50, flag=""):
 
     # Collect sample name.
     sample = get_filename(bam).replace("_primary", "")
-    # tin_store['samples'] = sample + "_obs_tin"
-    sample_cols = [sample + "_obs_tin", sample + "_exp_tin"]
-    tin_store.setdefault('samples', []).extend(sample_cols)
+    tin_store['samples'] = sample + "_obs_tin"
     return tin_store
 
 
@@ -458,17 +456,17 @@ def get_tin(depth_file, bgfile="", size=50):
             curr = uid
 
         if uid != curr:
-            fid, tlen, bg, obs_tin, exp_tin = calculate_tin(coverages=covs, background=background, uid=curr, size=size)
-            store[fid] = (tlen, bg, obs_tin, exp_tin)
+            fid, tlen, bg, tin, tin_cvg = calculate_tin(coverages=covs, background=background, uid=curr, size=size)
+            store[fid] = (tlen, bg, tin, tin_cvg)
             curr = uid
             covs = dict()
 
         covs.setdefault(uid, []).append(depth)
 
     # Print the last element
-    fid, tlen, bg, obs_tin, exp_tin = calculate_tin(coverages=covs, background=background, uid=uid, size=size)
+    fid, tlen, bg, tin, tin_cvg = calculate_tin(coverages=covs, background=background, uid=uid, size=size)
 
-    store[fid] = (tlen, bg, obs_tin, exp_tin)
+    store[fid] = (tlen, bg, tin, tin_cvg)
 
     return store
 
@@ -491,12 +489,11 @@ def calculate_tin(coverages, background, uid, size):
     vals = list(map(float, vals))
 
     # Calculate tin score.
-    obs_tin, exp_tin, tlen = tin_score(cvg=vals, size=size)
+    tin, tlen, tin_cvg = tin_score(cvg=vals, size=size)
 
-    obs_tin = round(obs_tin, 1)
-    exp_tin = round(exp_tin, 1)
+    tin = round(tin, 1)
 
-    return uid, tlen, bg, obs_tin, exp_tin
+    return uid, tlen, bg, tin, tin_cvg
 
 
 def shannon_entropy(vals):
@@ -517,12 +514,13 @@ def tin_score(cvg, size=50):
     """
     Calculate TIN score.
     cvg : coverage at each base position as a list.
-    size : no. of bases to be omitted from the beginning and end of the transcript to get the effective length.
+    size : no. of bases to be omitted from the beginning and end of the transcript so as to get the effective length.
     Returns transcript tin score and its effective length.
     """
 
     # Get effective size
-    # For short genes: if effective length <=0, then gene length is the effective length
+    # For short genes: if effective length <=0, then gene length is teh effective length
+
     cvg = cvg[size:-size] if (size != 0 and len(cvg) - size * 2 > 0) else cvg
 
     eff_len = len(cvg)
@@ -544,15 +542,15 @@ def tin_score(cvg, size=50):
     uni = math.exp(ent)
 
     # Calculate tin on the effective length
-    obs_tin = 100 * (uni) / eff_len
+    tin = 100 * (uni) / eff_len
 
-    # Calculate expected coverage
-    exp_cov = sum(cvg) / eff_len
+    cov = sum(cvg) / eff_len
+    # print("$$$", cov, eff_len, tin, expected_tin(cov))
+    return tin, eff_len, cov
 
-    # Calculate expected tin
-    exp_tin = expected_tin(exp_cov)
 
-    return obs_tin, exp_tin, eff_len
+def get_cov(count, read_len, size):
+    return count * read_len / size
 
 
 def expected_tin(cov):
@@ -622,6 +620,41 @@ def get_effective_length(merged, size=50):
     flen['samples'] = "eff_length"
 
     return flen
+
+
+def get_exp_tin(counts, paired, read_len, feat_len):
+    """
+    Calculate expected tin from counts.
+    Returns a dictionary with expected tins.
+    """
+
+    def remove_string(x):
+        return x.replace("_count", "")
+
+    store = dict()
+    tmp_store = dict()
+
+    for fid, vals in counts.items():
+        # Process sample names to add to the header.
+        if fid == "samples":
+            vals = list(map(remove_string, vals))
+            vals = add_string(vals, "_exp_tin")
+            store.setdefault(fid, []).extend(vals)
+            continue
+
+        # Process counts.
+        for v in vals:
+            count = v
+            count = float(count) * 2 if paired else float(count)
+            # flen = feat_len[fid]
+            flen = feat_len.get(fid, 1)  # Default is 1 to avoid division by zero.
+            cov = get_cov(count, read_len, flen)
+            exp_tin = round(expected_tin(cov), 2)
+            # print("***", fid, flen, count, cov, exp_tin)
+            store.setdefault(fid, []).append(exp_tin)
+            tmp_store.setdefault(fid, []).append(cov)
+
+    return store, tmp_store
 
 
 def exit_on_error(err):
@@ -703,12 +736,13 @@ def get_random_string(length):
 @plac.opt('ann', help="annotation file in GTF or GFF3 format")
 @plac.opt('feat', type=str, help="feature in the 3rd column of the anntation file on which TIN needs to be calculated")
 @plac.opt('groupby', type=str, help="attribute by which features need to be combined , eg: gene_id")
-@plac.opt('strand', type=str, help="strand on which tin should be calculated; options are both, same or reverse")
-@plac.opt('libtype', type=str, help="library type; options are paired or single")
+@plac.opt('strand', type=str, help="strand on which tin should be calculated, eg: both, same or reverse")
+@plac.opt('libtype', type=str, help="library type eg: paired or single")
+@plac.opt('read_len', type=int, help="read length")
 @plac.flg('bg', help="when specified background noise will be subtracted")
 @plac.opt('n', type=int, help="""number of bases to be subtracted from
                               each ends of the feature to calculate effective length""")
-def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='single', bg=False, n=50):
+def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='single', read_len=100, bg=False, n=50):
     bg_file, intron_len, intron_gtf = None, None, None
 
     # Check if inputs are valid.
@@ -723,6 +757,11 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
     # Make a string of bam files.
     bams = bams.split(',')
     bam = " ".join(bams)
+
+    # # Create a gtf file if an annotation file if not provided in the input.
+    # if not ann:
+    #     gtf = bam_to_gtf(bam)
+    #     ann = gtf
 
     # Extract features from annotation file.
     genes, features = collect_features(ann=ann, feat_type=feat, groupby=groupby)
@@ -749,8 +788,11 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
     gene_counts = get_counts(bam=bam, ann=ann, strand=strand,
                              feat=feat, groupby=groupby, paired=paired, log=log)
 
+    # Calculate expected tin.
+    exp_tins, exp_cov = get_exp_tin(counts=gene_counts, paired=paired, read_len=read_len, feat_len=feat_len)
+
     # Sample specific TIN calculations begin.
-    obs_tins, exp_tins = dict(), dict()
+    obs_tins = dict()
 
     for idx, bam in enumerate(bams):
 
@@ -762,16 +804,30 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
         # Extract primary alignments
         pbam = get_primary_aln(bam)
 
-        gene_tin = get_gene_tin(bam=pbam, bed=bed, strand=strand, bgfile=bg_file, size=n)
+        gene_tin = get_obs_tin(bam=pbam, bed=bed, strand=strand, bgfile=bg_file, size=n)
+
+        h = "\t".join(
+            ['id', 'exp_cov1(with_count)', 'exp_cov2(from_depth)', 'exp_tin1(with_count)', 'exp_tin2(from_depth)'])
+        print(h)
+        for k, v in gene_tin.items():
+            if k == "samples":
+                continue
+
+            exp_tin_cov1 = exp_cov[k][0]
+
+            exp_tin_cov2 = gene_tin[k][3]
+            exp_tin1, exp_tin2 = expected_tin(exp_tin_cov1), expected_tin(exp_tin_cov2)
+
+            print(k, round(exp_tin_cov1, 2), round(exp_tin_cov2, 2), round(exp_tin1, 2), round(exp_tin2, 2))
+
+        print("----------------")
 
         # Collect obs_tins.
         for uid, vals in gene_tin.items():
             if uid == "samples":
-                obs_tins.setdefault(uid, []).append(vals[0])
-                exp_tins.setdefault(uid, []).append(vals[1])
+                obs_tins.setdefault(uid, []).append(vals)
             else:
                 obs_tins.setdefault(uid, []).append(vals[2])
-                exp_tins.setdefault(uid, []).append(vals[3])
 
     # Collect all results, gid,counts, exp_tin, obs_tin
     results = dict()

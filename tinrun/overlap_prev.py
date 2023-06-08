@@ -2,7 +2,7 @@ import csv, sys, os, math, random
 import argparse, subprocess, string
 
 import plac
-from tinrun import tin
+from tinrun import tin_prev as tin
 
 """
 This script checks for run-in transcription overlap.
@@ -189,7 +189,7 @@ def make_intergenic_gtf(coords, outfile="intergenic.gtf"):
 def name_intergenic_regions(intergenic, genes, short):
     """"
     Name the intergenic intervals with the geneids of the neighboring genes in the format gene_id1:geneid2
-    if (igstart, igend) are in between gene1-start and gene2-start a, then it will get the name gene1:gene2.
+    if (igstart, igend) are in between gene1-start and gene2-start a, then it will get the name geen1:gene2.
     Returns a dictionary with intergenic-name as key and its coordinates as values.
     """
     ignames = dict()
@@ -465,6 +465,7 @@ def check_runin(data, gmeasures, igmeasures, strand, tin_cutoff=40, count_cutoff
                 right_count_condition(gene_count, gright_count, iright_count):
             runins[gene] = "right"
 
+
     return runins
 
 
@@ -490,13 +491,14 @@ def right_count_condition(gene_count, gright_count, igright_count):
 @plac.opt('groupby', type=str, help="attribute by which features need to be combined , eg: gene_id")
 @plac.opt('strand', type=str, help="strand on which tin should be calculated, eg: both, same or reverse")
 @plac.opt('libtype', type=str, help="library type eg: paired or single" )
+@plac.opt('read_len', type=int, help="read length")
 @plac.flg('bg', help="when specified background noise will be subtracted")
 @plac.opt('n', type=int, help="""number of bases to be subtracted from
                               each ends of the feature to calculate effective length""")
 @plac.opt('tin_cutoff', type=int, help="""tin cutoff to be used for checking overlaps 
                     Genes with tin < tin-cutoff and count >count_cutoff are checked for overlaps""")
 @plac.opt('count_cutoff', type=int, help="count cutoff to be used for checking overlaps. ie, minimum reads required to be considered a gene as being expressed")
-def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='single', bg=False, n=50,
+def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='single', read_len=100, bg=False, n=50,
         tin_cutoff=40, count_cutoff=40):
     bg_file, intron_len, intron_gtf = None, None, None
 
@@ -576,10 +578,10 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
     feat_len = tin.get_effective_length(merged, n)
 
     # Calculate expected tin.
-    #exp_tins = tin.get_exp_tin(counts=gene_counts, paired=paired, read_len=read_len, feat_len=feat_len)
+    exp_tins = tin.get_exp_tin(counts=gene_counts, paired=paired, read_len=read_len, feat_len=feat_len)
 
     # Sample specific TIN calculations begins.
-    runins, obs_tins, exp_tins = dict(), dict(), dict()
+    runins, obs_tins = dict(), dict()
 
     for idx, bam in enumerate(bams):
 
@@ -604,10 +606,10 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
 
         if strand == "both":
             # Get gene tin.
-            gene_tin = tin.get_gene_tin(bam=pbam, bed=bed, strand=strand, bgfile=bg_file, size=n, flag="gene")
+            gene_tin = tin.get_obs_tin(bam=pbam, bed=bed, strand=strand, bgfile=bg_file, size=n, flag="gene")
 
             # Get intergenic tin.
-            ig_tin = tin.get_gene_tin(bam=pbam, bed=ig_bed, strand=strand, size=0, flag="ig")
+            ig_tin = tin.get_obs_tin(bam=pbam, bed=ig_bed, strand=strand, size=0, flag="ig")
 
             # Get the gene counts and tins calculated for the sample in a single place.
             gene_measures = collect_measures(counts=sample_gene_counts, tins=gene_tin,
@@ -619,13 +621,13 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
         else:
 
             # Get gene sense and antisense tin.
-            gtin_sense = tin.get_gene_tin(bam=pbam, bed=bed, strand="same", bgfile=bg_file, size=n, flag="gene_sense")
-            gtin_antisense = tin.get_gene_tin(bam=pbam, bed=bed, strand="reverse", bgfile=bg_file, size=n,
+            gtin_sense = tin.get_obs_tin(bam=pbam, bed=bed, strand="same", bgfile=bg_file, size=n, flag="gene_sense")
+            gtin_antisense = tin.get_obs_tin(bam=pbam, bed=bed, strand="reverse", bgfile=bg_file, size=n,
                                              flag="gene_antisense")
 
             # Get intergenic sense and antisense tin. Intergenic bed has + as sense strand.
-            igtin_sense = tin.get_gene_tin(bam=pbam, bed=ig_bed, strand="same", size=0, flag="ig_sense")
-            igtin_antisense = tin.get_gene_tin(bam=pbam, bed=ig_bed, strand="reverse", size=0, flag="ig_antisense")
+            igtin_sense = tin.get_obs_tin(bam=pbam, bed=ig_bed, strand="same", size=0, flag="ig_sense")
+            igtin_antisense = tin.get_obs_tin(bam=pbam, bed=ig_bed, strand="reverse", size=0, flag="ig_antisense")
 
             # Get tin according to the library strand.
             gene_tin = gtin_antisense if strand == "reverse" else gtin_sense
@@ -644,7 +646,6 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
                                                    sense_tins=igtin_sense,
                                                    antisense_tins=igtin_antisense, strand=strand)
 
-
         # Check overlap
         overlaps = check_runin(data=genes, gmeasures=gene_measures, igmeasures=intergenic_measures,
                                strand=strand, tin_cutoff=tin_cutoff, count_cutoff=count_cutoff)
@@ -652,11 +653,9 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
         # Collect obs_tins.
         for uid, vals in gene_tin.items():
             if uid == "samples":
-                obs_tins.setdefault(uid, []).append(vals[0])
-                exp_tins.setdefault(uid, []).append(vals[1])
+                obs_tins.setdefault(uid, []).append(vals)
             else:
                 obs_tins.setdefault(uid, []).append(vals[2])
-                exp_tins.setdefault(uid, []).append(vals[3])
 
         # Collect runins
         for gene in gene_counts:
@@ -689,7 +688,7 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
     # Clean up temporary files.
     # cmd = f'rm -f {TMP}/*primary.bam*'
     cmd = f'rm -rf {TMP}'
-    os.system(cmd)
+    # os.system(cmd)
 
 
 if __name__ == "__main__":

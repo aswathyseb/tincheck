@@ -62,7 +62,7 @@ def write_to_file(rows, fh):
         fh.write(row + "\n")
 
 
-@plac.pos('bams', "bam files")
+@plac.pos('bams', "Bam file.")
 @plac.opt('outfile', "Output file name.")
 def run(bams, outfile='ann.gtf'):
     bam = bams.split(',')[0]
