@@ -401,7 +401,7 @@ def check_runin(data, gmeasures, igmeasures, strand, tin_cutoff=40, count_cutoff
 
         # Stranded mode check.
         else:
-            if gene_strand == "+" and strand == "reverse":
+            if gene_strand == "+" and strand == "antisense":
                 ileft_tin = igmeasures[ileft].antisense_tin if ileft in igmeasures else None
                 iright_tin = igmeasures[iright].antisense_tin if iright in igmeasures else None
                 ileft_count = igmeasures[ileft].antisense_count if ileft in igmeasures else None
@@ -412,7 +412,7 @@ def check_runin(data, gmeasures, igmeasures, strand, tin_cutoff=40, count_cutoff
                 gleft_count = gmeasures[lgene].antisense_count if lgene_strand == "+" else gmeasures[lgene].sense_count
                 gright_count = gmeasures[rgene].antisense_count if rgene_strand == "+" else gmeasures[rgene].sense_count
 
-            if gene_strand == "-" and strand == "reverse":
+            if gene_strand == "-" and strand == "antisense":
                 ileft_tin = igmeasures[ileft].sense_tin if ileft in igmeasures else None
                 iright_tin = igmeasures[iright].sense_tin if iright in igmeasures else None
                 ileft_count = igmeasures[ileft].sense_count if ileft in igmeasures else None
@@ -423,7 +423,7 @@ def check_runin(data, gmeasures, igmeasures, strand, tin_cutoff=40, count_cutoff
                 gleft_count = gmeasures[lgene].antisense_count if lgene_strand == "-" else gmeasures[lgene].sense_count
                 gright_count = gmeasures[rgene].antisense_count if rgene_strand == "-" else gmeasures[rgene].sense_count
 
-            if gene_strand == "+" and strand == "same":
+            if gene_strand == "+" and strand == "sense":
                 ileft_tin = igmeasures[ileft].sense_tin if ileft in igmeasures else None
                 iright_tin = igmeasures[iright].sense_tin if iright in igmeasures else None
                 ileft_count = igmeasures[ileft].sense_count if ileft in igmeasures else None
@@ -434,7 +434,7 @@ def check_runin(data, gmeasures, igmeasures, strand, tin_cutoff=40, count_cutoff
                 gleft_count = gmeasures[lgene].sense_count if lgene_strand == "+" else gmeasures[lgene].antisense_count
                 gright_count = gmeasures[rgene].sense_count if rgene_strand == "+" else gmeasures[rgene].antisense_count
 
-            if gene_strand == "-" and strand == "same":
+            if gene_strand == "-" and strand == "sense":
                 ileft_tin = igmeasures[ileft].antisense_tin if ileft in igmeasures else None
                 iright_tin = igmeasures[iright].antisense_tin if iright in igmeasures else None
                 ileft_count = igmeasures[ileft].antisense_count if ileft in igmeasures else None
@@ -488,7 +488,7 @@ def right_count_condition(gene_count, gright_count, igright_count):
 @plac.opt('ann', help="annotation file in GTF or GFF3 format.")
 @plac.opt('feat', type=str, help="feature in the 3rd column of the anntation file on which TIN needs to be calculated")
 @plac.opt('groupby', type=str, help="attribute by which features need to be combined , eg: gene_id")
-@plac.opt('strand', type=str, help="strand on which tin should be calculated, eg: both, same or reverse")
+@plac.opt('strand', type=str, help="strand on which tin should be calculated, eg: both, sense or antisense")
 @plac.opt('libtype', type=str, help="library type eg: paired or single" )
 @plac.flg('bg', help="when specified background noise will be subtracted")
 @plac.opt('n', type=int, help="""number of bases to be subtracted from
@@ -550,17 +550,17 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
     paired = True if libtype == "paired" else False
 
     # Get gene counts in both sense and antisense.
-    gcounts_sense = tin.get_counts(bam=bam, ann=ann, strand="same", feat=feat,
+    gcounts_sense = tin.get_counts(bam=bam, ann=ann, strand="sense", feat=feat,
                                    groupby=groupby, paired=paired, flag="gene_sense", log=log)
 
-    gcounts_antisense = tin.get_counts(bam=bam, ann=ann, strand="reverse", feat=feat,
+    gcounts_antisense = tin.get_counts(bam=bam, ann=ann, strand="antisense", feat=feat,
                                        groupby=groupby, paired=paired, flag="gene_antisense", log=log)
 
     # Get intergenic counts in both sense and antisense.
-    igcounts_sense = tin.get_counts(bam=bam, ann=ig_ann, strand="same", feat="intergenic",
+    igcounts_sense = tin.get_counts(bam=bam, ann=ig_ann, strand="sense", feat="intergenic",
                                     groupby=groupby, paired=paired, flag="ig_sense", log=log)
 
-    igcounts_antisense = tin.get_counts(bam=bam, ann=ig_ann, strand="reverse", feat="intergenic",
+    igcounts_antisense = tin.get_counts(bam=bam, ann=ig_ann, strand="antisense", feat="intergenic",
                                         groupby=groupby, paired=paired, flag="ig_antisense", log=log)
 
     # Get the observed gene counts and intergenic according to the library strand.
@@ -569,8 +569,8 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
         gene_counts = combine_counts(gcounts_sense, gcounts_antisense)
         ig_counts = combine_counts(igcounts_sense, igcounts_antisense)
     else:
-        gene_counts = gcounts_antisense if strand == "reverse" else gcounts_sense
-        ig_counts = igcounts_antisense if strand == "reverse" else igcounts_sense
+        gene_counts = gcounts_antisense if strand == "antisense" else gcounts_sense
+        ig_counts = igcounts_antisense if strand == "antisense" else igcounts_sense
 
     # Get feature length
     feat_len = tin.get_effective_length(merged, n)
@@ -619,17 +619,17 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
         else:
 
             # Get gene sense and antisense tin.
-            gtin_sense = tin.get_gene_tin(bam=pbam, bed=bed, strand="same", bgfile=bg_file, size=n, flag="gene_sense")
-            gtin_antisense = tin.get_gene_tin(bam=pbam, bed=bed, strand="reverse", bgfile=bg_file, size=n,
+            gtin_sense = tin.get_gene_tin(bam=pbam, bed=bed, strand="sense", bgfile=bg_file, size=n, flag="gene_sense")
+            gtin_antisense = tin.get_gene_tin(bam=pbam, bed=bed, strand="antisense", bgfile=bg_file, size=n,
                                              flag="gene_antisense")
 
             # Get intergenic sense and antisense tin. Intergenic bed has + as sense strand.
-            igtin_sense = tin.get_gene_tin(bam=pbam, bed=ig_bed, strand="same", size=0, flag="ig_sense")
-            igtin_antisense = tin.get_gene_tin(bam=pbam, bed=ig_bed, strand="reverse", size=0, flag="ig_antisense")
+            igtin_sense = tin.get_gene_tin(bam=pbam, bed=ig_bed, strand="sense", size=0, flag="ig_sense")
+            igtin_antisense = tin.get_gene_tin(bam=pbam, bed=ig_bed, strand="antisense", size=0, flag="ig_antisense")
 
             # Get tin according to the library strand.
-            gene_tin = gtin_antisense if strand == "reverse" else gtin_sense
-            ig_tin = igtin_antisense if strand == "reverse" else igtin_sense
+            gene_tin = gtin_antisense if strand == "antisense" else gtin_sense
+            ig_tin = igtin_antisense if strand == "sense" else igtin_sense
 
             # Get the counts and the different types of tins calculated for a gene in a single place.
             gene_measures = collect_measures(counts=sample_gene_counts, tins=gene_tin,
@@ -687,9 +687,8 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
         print(out)
 
     # Clean up temporary files.
-    # cmd = f'rm -f {TMP}/*primary.bam*'
     cmd = f'rm -rf {TMP}'
-    os.system(cmd)
+    # os.system(cmd)
 
 
 if __name__ == "__main__":

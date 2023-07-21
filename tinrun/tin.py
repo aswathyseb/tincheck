@@ -93,7 +93,7 @@ def get_counts(bam, ann, strand="", feat="exon", groupby="gene", paired=False, f
     if strand == "both":
         sflag = ""
     else:
-        sflag = '-s 2' if strand == "reverse" else '-s 1'
+        sflag = '-s 2' if strand == "sense" else '-s 1'
 
     # Make the command.
     cmd = f'featureCounts --primary -M {pflag} {sflag} -t {feat} -O -g {group_attr} -a {ann} -o {countsfile} {bam} 2>>{log}'
@@ -385,7 +385,7 @@ def make_feature_bed(genes, merged):
     return bedfile
 
 
-def get_depth(bam, bed, strand='reverse', flag=""):
+def get_depth(bam, bed, strand='sense', flag=""):
     """
     Use bedtools to get the depth at every position.
     """
@@ -394,7 +394,7 @@ def get_depth(bam, bed, strand='reverse', flag=""):
         if strand == "both":
             lib_strand = ""
         else:
-            lib_strand = '-S' if strand == "reverse" else '-s'
+            lib_strand = '-S' if strand == "sense" else '-s'
         return lib_strand
 
     # Set strandedness.
@@ -630,7 +630,7 @@ def exit_on_error(err):
 
 
 def check_strand(strand):
-    return True if strand in ['both', 'same', 'reverse'] else False
+    return True if strand in ['both', 'sense', 'antisense'] else False
 
 
 def check_libtype(libtype):
@@ -681,7 +681,7 @@ def check_inputs(bams, strand, lib_type, ann):
 
     # Make sure entered strand is valid.
     if not check_strand(strand):
-        print("Invalid strand. Available options are both, same, reverse")
+        print("Invalid strand. Available options are both, sense, antisense")
         sys.exit()
 
     # Make sure entered libtype is valid.
@@ -703,7 +703,7 @@ def get_random_string(length):
 @plac.opt('ann', help="annotation file in GTF or GFF3 format")
 @plac.opt('feat', type=str, help="feature in the 3rd column of the anntation file on which TIN needs to be calculated")
 @plac.opt('groupby', type=str, help="attribute by which features need to be combined , eg: gene_id")
-@plac.opt('strand', type=str, help="strand on which tin should be calculated; options are both, same or reverse")
+@plac.opt('strand', type=str, help="strand on which tin should be calculated; options are both, sense or antisense")
 @plac.opt('libtype', type=str, help="library type; options are paired or single")
 @plac.flg('bg', help="when specified background noise will be subtracted")
 @plac.opt('n', type=int, help="""number of bases to be subtracted from
@@ -793,7 +793,6 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
         print(out)
 
     # Clean up temporary files.
-    # cmd = f'rm -f {TMP}/*primary.bam*'
     cmd = f'rm -rf {TMP}'
     os.system(cmd)
 

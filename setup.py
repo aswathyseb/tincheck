@@ -5,14 +5,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="tin",
+    name="tincheck",
     version=tinrun.VERSION,
     author="Aswathy Sebastian",
     author_email="aswathyseb@gmail.com",
-    description="tin",
+    description="tincheck",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/aswathyseb/tin",
+    url="https://github.com/aswathyseb/tincheck",
     packages=find_packages(include=["tinrun", "tinrun.*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -21,6 +21,8 @@ setup(
     ],
 
     install_requires=[
+        'plac',
+
     ],
 
     entry_points={
