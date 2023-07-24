@@ -3,3 +3,4 @@ tincheck.egg-info/
 __pycache__/
 tinrun/__pycache__/
 *.egg-info/
+*.pyc
