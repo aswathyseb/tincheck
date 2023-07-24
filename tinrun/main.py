@@ -1,6 +1,6 @@
 import plac, sys
 
-from tinrun import tin, overlap, bam2gtf, tin_test, tin_prev, overlap_prev, overlap_v2
+from tinrun import tin, overlap, bam2gtf, overlap_v2
 
 SUB_COMMANDS = {'tin': tin.run, 'overlap': overlap.run, 'bam2gtf': bam2gtf.run,
                 'overlap_v2': overlap_v2.run}
