@@ -1,0 +1,2 @@
+[console_scripts]
+tincheck = tinrun.__main__:main

@@ -686,7 +686,7 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='unstranded', libty
 
     # Clean up temporary files.
     cmd = f'rm -rf {TMP}'
-    # os.system(cmd)
+    os.system(cmd)
 
 
 if __name__ == "__main__":
