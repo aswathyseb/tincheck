@@ -457,13 +457,13 @@ def check_runin(data, gmeasures, igmeasures, strand, tin_cutoff=40, count_cutoff
                 left_count_condition(gene_count, gleft_count, ileft_count) and \
                 right_tin_condition(gene_tin, gright_tin, iright_tin) and \
                 right_count_condition(gene_count, gright_count, iright_count):
-            runins[gene] = "both"
+            runins[gene] = f"both {gleft_count} {ileft_count} {gright_count} {iright_count}"
         elif left_tin_condition(gene_tin, gleft_tin, ileft_tin) and \
                 left_count_condition(gene_count, gleft_count, ileft_count):
-            runins[gene] = "left"
+            runins[gene] = f"left {gleft_count} {ileft_count} {gright_count} {iright_count}"
         elif right_tin_condition(gene_tin, gright_tin, iright_tin) and \
                 right_count_condition(gene_count, gright_count, iright_count):
-            runins[gene] = "right"
+            runins[gene] = f"right {gleft_count} {ileft_count} {gright_count} {iright_count}"
 
     return runins
 

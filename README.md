@@ -1,11 +1,33 @@
-# tin
+# Tincheck
+
+Tincheck is a python package to calculate transcript Integrity Number (TIN) and Transcription overlap.
+
+Transcripts with transcription overlap or uneven coverage can result in false positives in differential expression analysis.
+Transcript Integrity Number is a metric that calculates coverage evenness and can be used as a filtering criteria in RNA-Seq studies to improve the accuracy of results.
+
+
 **Transcript Integrity Number (TIN)** calculation
 
 TIN denotes how evenly a feature is covered by reads. By default, the script calculate the coverage evenness across a 
-gene by considering the coverage across all exons.
+gene by considering the coverage across all exons. However, the script can calculate coverage evenness across a transcript or any other feature that is in the annotation file.
 
-In addition, the script also checks for *overlap transcription* where a transcript from the neighboring gene overlap with another gene.
-It is important to take a note of such cases, as it can affect th differential expression results.
+
+**Inputs**
+1. Alignment file in bam format
+2. Annotation file in GTFor GFF3 format
+
+**Output**
+
+Tab delimited textfile  with TIN score calculated for each gene/transcript/any other feature specified in the input.
+An example is given below.
+
+    target_id       eff_length  S1_count    S1_exp_tin  S1_obs_tin
+    PF3D7_0102700	1683	    670	        100.0	    70.9
+    PF3D7_0103700	1624	    135	        100.0	    72.8
+    PF3D7_0107300	1581	    4508        100.0	    70.4
+    PF3D7_0107600	5702	    4979        100.0	    74.9
+    PF3D7_0107800	4424	    924	        100.0	    78.8
+
 
 **How to install the script?**
     
@@ -37,6 +59,7 @@ Given a bam file and an annotation file, the simplest way to run the script is
 **How to calculate TIN across coding regions of a gene?**
     
     tincheck tin  --ann data/ann.gtf --feat CDS data/sample.bam 
+ 
 
 **Available options**
 
@@ -50,9 +73,9 @@ Given a bam file and an annotation file, the simplest way to run the script is
          
 `--strand` When specified, depth is calculated in strand-specific manner. Possible values are 'both', 'sense' or 'antisense'. Default is both.
 
+
 `--lib_type` Specify if the library is paired or single. Valid options are 'single' or 'paired. Default is single.'
 
-`--read_len` Read length. Default is 100 bp.
 
 `--bg` If specified background noise will be subtracted
  
@@ -60,21 +83,23 @@ Given a bam file and an annotation file, the simplest way to run the script is
     
 **How is tin calculated**
 
-Overlapping features specified by `--feat` are merged together for a gene and tin is calculated 
+Overlapping features specified by `--feat` are merged together and coverage evenness is captured using Shannon's entropy formula  (H).
+This is then convered into TIN Score as
 
-TO Do: add formula  here.
+    TIN = (100*exp(H))⁄length  where H= Shannon's entropy formula.
 
-**Transcript overlaps (run-ins)**
 
-Transcript overlaps are flagged using `overlap.py` script.
+**Transcription overlaps**
+
+Transcription overlaps are flagged using `overlap.py` script.
 
 	tincheck overlap --ann data/ann.gtf data/sample.bam >sample_overlap.txt
 
-Genes are checked for overlap only if 
+By default, genes are checked for runins only if 
 
     gene-tin < tin-cutoff and gene-count > count-cutoff
     
- ie, genes with enough coverage but low tins are candidates for potential overlap.
+ ie, genes with enough counts but low tins are checked for transcription overlap
  
 If the count and tin values of neighboring genes and the inter-genic regions in the gene sense strand is 
 comparable to the gene count and tin, then that gene is considered to have an overlap from neighboring transcripts.

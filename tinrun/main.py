@@ -1,9 +1,9 @@
 import plac, sys
 
-from tinrun import tin, overlap, bam2gtf, tin_test, tin_prev, overlap_prev
+from tinrun import tin, overlap, bam2gtf, tin_test, tin_prev, overlap_prev, overlap_v2
 
-SUB_COMMANDS = {'tin': tin.run, 'overlap': overlap.run, 'bam2gtf': bam2gtf.run,}
-
+SUB_COMMANDS = {'tin': tin.run, 'overlap': overlap.run, 'bam2gtf': bam2gtf.run,
+                'overlap_v2': overlap_v2.run}
 
 USAGE = f"""
    tincheck: Check the coverage evenness of a transcript \n
@@ -11,7 +11,8 @@ USAGE = f"""
    tincheck tin       : calculate TIN
    tincheck overlap   : calculate transcript overlap
    tincheck bam2gtf   : create a GTF file from bam file
-   
+   tincheck overlap_v2 :  calculate transcript overlap version 2 with simplified conditions
+
    Run each command for more help.
    """
 
