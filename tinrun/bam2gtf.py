@@ -62,8 +62,8 @@ def write_to_file(rows, fh):
         fh.write(row + "\n")
 
 
-@plac.pos('bams', "Bam file.")
-@plac.opt('outfile', "Output file name.")
+@plac.pos('bams', "bam file")
+@plac.opt('outfile', "output file name")
 def run(bams, outfile='ann.gtf'):
     bam = bams.split(',')[0]
     refs = parse_bam_header(bam)

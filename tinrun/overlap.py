@@ -309,7 +309,7 @@ def get_sample_vals(info, sample_index):
 
 
 def collect_measures(counts, tins, sense_counts={}, antisense_counts={}, sense_tins={},
-                     antisense_tins={}, strand="both"):
+                     antisense_tins={}, strand="unstranded"):
     """
     Collect exp,tin, obs_tin, tin_sense, tin_antisense in a single dictionary.
     """
@@ -319,7 +319,7 @@ def collect_measures(counts, tins, sense_counts={}, antisense_counts={}, sense_t
         tin = tins[gene][2]
         m = Measures(count=count, tin=tin)
 
-        if strand != "both":
+        if strand != "unstranded":
             sense_count = sense_counts[gene]
             antisense_count = antisense_counts[gene]
             sense_tin = sense_tins[gene][2]
@@ -394,7 +394,7 @@ def check_runin(data, gmeasures, igmeasures, strand, tin_cutoff=40, count_cutoff
         iright = ":".join([gene, rgene])
 
         # Unstranded mode check.
-        if strand == "both":
+        if strand == "unstranded":
             gene_vals, ig_vals = get_neighbor_values(lgene, rgene, ileft, iright, gmeasures, igmeasures)
             gleft_tin, gright_tin, gleft_count, gright_count = gene_vals
             ileft_tin, iright_tin, ileft_count, iright_count = ig_vals
@@ -457,13 +457,13 @@ def check_runin(data, gmeasures, igmeasures, strand, tin_cutoff=40, count_cutoff
                 left_count_condition(gene_count, gleft_count, ileft_count) and \
                 right_tin_condition(gene_tin, gright_tin, iright_tin) and \
                 right_count_condition(gene_count, gright_count, iright_count):
-            runins[gene] = f"both {gleft_count} {ileft_count} {gright_count} {iright_count}"
+            runins[gene] = f"both"
         elif left_tin_condition(gene_tin, gleft_tin, ileft_tin) and \
                 left_count_condition(gene_count, gleft_count, ileft_count):
-            runins[gene] = f"left {gleft_count} {ileft_count} {gright_count} {iright_count}"
+            runins[gene] = f"left"
         elif right_tin_condition(gene_tin, gright_tin, iright_tin) and \
                 right_count_condition(gene_count, gright_count, iright_count):
-            runins[gene] = f"right {gleft_count} {ileft_count} {gright_count} {iright_count}"
+            runins[gene] = f"right"
 
     return runins
 
@@ -484,19 +484,17 @@ def right_count_condition(gene_count, gright_count, igright_count):
     return gright_count >= gene_count and igright_count >= gene_count
 
 
-@plac.pos('bams', "comma separated bam files.")
-@plac.opt('ann', help="annotation file in GTF or GFF3 format.")
-@plac.opt('feat', type=str, help="feature in the 3rd column of the anntation file on which TIN needs to be calculated")
-@plac.opt('groupby', type=str, help="attribute by which features need to be combined , eg: gene_id")
-@plac.opt('strand', type=str, help="strand on which tin should be calculated, eg: both, sense or antisense")
-@plac.opt('libtype', type=str, help="library type eg: paired or single" )
-@plac.flg('bg', help="when specified background noise will be subtracted")
-@plac.opt('n', type=int, help="""number of bases to be subtracted from
-                              each ends of the feature to calculate effective length""")
-@plac.opt('tin_cutoff', type=int, help="""tin cutoff to be used for checking overlaps 
-                    Genes with tin < tin-cutoff and count >count_cutoff are checked for overlaps""")
-@plac.opt('count_cutoff', type=int, help="count cutoff to be used for checking overlaps. ie, minimum reads required to be considered a gene as being expressed")
-def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='single', bg=False, n=50,
+@plac.pos('bams', "comma separated bam files")
+@plac.opt('ann', help="annotation file (GTF/GFF3)")
+@plac.opt('feat', type=str, help="feature in annotation file's 3rd column")
+@plac.opt('groupby', type=str, help="feature grouping attribute (e.g., gene_id)")
+@plac.opt('strand', type=str, help="strand for tin calculation (unstranded/sense/antisense)")
+@plac.opt('libtype', type=str, help="library type (paired/single)" )
+@plac.flg('bg', help="subtract background noise")
+@plac.opt('n', type=int, help="bases to subtract from feature ends for effective length calculation")
+@plac.opt('tin_cutoff', type=int, help="tin cutoff for overlaps")
+@plac.opt('count_cutoff', type=int, help="count cutoff for overlaps")
+def run(bams, ann="", feat='exon', groupby='gene_id', strand='unstranded', libtype='single', bg=False, n=0,
         tin_cutoff=40, count_cutoff=40):
     bg_file, intron_len, intron_gtf = None, None, None
 
@@ -564,7 +562,7 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
                                         groupby=groupby, paired=paired, flag="ig_antisense", log=log)
 
     # Get the observed gene counts and intergenic according to the library strand.
-    if strand == "both":
+    if strand == "unstranded":
         # Gene counts in unstranded mode. Sum up both sense and antisense counts.
         gene_counts = combine_counts(gcounts_sense, gcounts_antisense)
         ig_counts = combine_counts(igcounts_sense, igcounts_antisense)
@@ -602,7 +600,7 @@ def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='si
         # Extract primary alignments
         pbam = tin.get_primary_aln(bam)
 
-        if strand == "both":
+        if strand == "unstranded":
             # Get gene tin.
             gene_tin = tin.get_gene_tin(bam=pbam, bed=bed, strand=strand, bgfile=bg_file, size=n, flag="gene")
 

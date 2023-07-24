@@ -36,7 +36,7 @@ An example is given below.
 It would be better to create a conda environment and install the script as shown below
     
     conda create -n tincheck -y python=3.8
-    conda activate tin
+    conda activate tincheck
 
 Install additional requirements
     
@@ -58,28 +58,8 @@ Given a bam file and an annotation file, the simplest way to run the script is
 
 **How to calculate TIN across coding regions of a gene?**
     
-    tincheck tin  --ann data/ann.gtf --feat CDS data/sample.bam 
- 
+    tincheck tin  --ann data/ann.gtf --feat CDS data/sample.bam
 
-**Available options**
-
-`--ann` Annotation file GTF/GFF3 format.
-
-`--feat` Subfeature that is grouped together to compute TIN. It should match the 3rd column in annotation file.
-         Default is exon.
-         
-`--groupby` Feature by which subfeatures needs to be combined. It should match the 3rd column in annotation file.
-            Default is gene.
-         
-`--strand` When specified, depth is calculated in strand-specific manner. Possible values are 'both', 'sense' or 'antisense'. Default is both.
-
-
-`--lib_type` Specify if the library is paired or single. Valid options are 'single' or 'paired. Default is single.'
-
-
-`--bg` If specified background noise will be subtracted
- 
-`--n` No. of bases to be subtracted from each ends of the feature to calculate effective length. Default is 50.
     
 **How is tin calculated**
 
@@ -95,17 +75,19 @@ Transcription overlaps are flagged using `overlap.py` script.
 
 	tincheck overlap --ann data/ann.gtf data/sample.bam >sample_overlap.txt
 
-By default, genes are checked for runins only if 
+By default, genes are checked for overlap only if 
 
     gene-tin < tin-cutoff and gene-count > count-cutoff
     
  ie, genes with enough counts but low tins are checked for transcription overlap
  
-If the count and tin values of neighboring genes and the inter-genic regions in the gene sense strand is 
+A gene is flagged to have a transcription overlap if either of its neighboring genes and the corresponding inter-genic region have a higher tin-score and read count than the gene of interest.
+
+In stranded mode, if the count and tin values of neighboring genes and the intergenic region in the gene sense strand is 
 comparable to the gene count and tin, then that gene is considered to have an overlap from neighboring transcripts.
 
 
-More specifically, a gene is considered to have a neighboring transcript overlap, if **either of** the following conditions are satisfied.
+More specifically in stranded mode, a gene is considered to have a neighboring transcript overlap, if **either of** the following conditions are satisfied.
 
     
     1. left gene tin in gene sense strand >= gene tin and left intergenic tin in gene sense strand >=gene-tin

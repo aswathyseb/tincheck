@@ -90,7 +90,7 @@ def get_counts(bam, ann, strand="", feat="exon", groupby="gene", paired=False, f
     group_attr = "gene_id" if feat == "intergenic" else groupby
 
     # Set strandedness.
-    if strand == "both":
+    if strand == "unstranded":
         sflag = ""
     else:
         sflag = '-s 2' if strand == "sense" else '-s 1'
@@ -391,7 +391,7 @@ def get_depth(bam, bed, strand='sense', flag=""):
     """
 
     def get_strand_flag(strand):
-        if strand == "both":
+        if strand == "unstranded":
             lib_strand = ""
         else:
             lib_strand = '-S' if strand == "sense" else '-s'
@@ -630,7 +630,7 @@ def exit_on_error(err):
 
 
 def check_strand(strand):
-    return True if strand in ['both', 'sense', 'antisense'] else False
+    return True if strand in ['unstranded', 'sense', 'antisense'] else False
 
 
 def check_libtype(libtype):
@@ -681,7 +681,7 @@ def check_inputs(bams, strand, lib_type, ann):
 
     # Make sure entered strand is valid.
     if not check_strand(strand):
-        print("Invalid strand. Available options are both, sense, antisense")
+        print("Invalid strand. Available options are unstranded, sense, antisense")
         sys.exit()
 
     # Make sure entered libtype is valid.
@@ -699,16 +699,15 @@ def get_random_string(length):
     return random_str
 
 
-@plac.pos('bams', "comma separated bam files.")
-@plac.opt('ann', help="annotation file in GTF or GFF3 format")
-@plac.opt('feat', type=str, help="feature in the 3rd column of the anntation file on which TIN needs to be calculated")
-@plac.opt('groupby', type=str, help="attribute by which features need to be combined , eg: gene_id")
-@plac.opt('strand', type=str, help="strand on which tin should be calculated; options are both, sense or antisense")
-@plac.opt('libtype', type=str, help="library type; options are paired or single")
-@plac.flg('bg', help="when specified background noise will be subtracted")
-@plac.opt('n', type=int, help="""number of bases to be subtracted from
-                              each ends of the feature to calculate effective length""")
-def run(bams, ann="", feat='exon', groupby='gene_id', strand='both', libtype='single', bg=False, n=50):
+@plac.pos('bams', "comma separated bam files")
+@plac.opt('ann', help="annotation file (GTF/GFF3)")
+@plac.opt('feat', type=str, help="feature in annotation file's 3rd column")
+@plac.opt('groupby', type=str, help="feature grouping attribute (e.g., gene_id)")
+@plac.opt('strand', type=str, help="strand for tin calculation (unstranded/sense/antisense)")
+@plac.opt('libtype', type=str, help="library type (paired/single)")
+@plac.flg('bg', help="subtract background noise")
+@plac.opt('n', type=int, help="bases to subtract from feature ends for effective length calculation")
+def run(bams, ann="", feat='exon', groupby='gene_id', strand='unstranded', libtype='single', bg=False, n=50):
     bg_file, intron_len, intron_gtf = None, None, None
 
     # Check if inputs are valid.
