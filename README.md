@@ -35,7 +35,7 @@ An example is given below.
 
 It would be better to create a conda environment and install the script as shown below
     
-    conda create -n tin -y python=3.6
+    conda create -n tincheck -y python=3.8
     conda activate tin
 
 Install additional requirements
