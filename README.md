@@ -16,14 +16,14 @@ Test data and annotation file is in `data` folder.
 **Inputs**
 
 1. Alignment file in bam format
-2. Annotation file in GTFor GFF3 format
+2. Annotation file in GTF/GFF3 format
 
 **Output**
 
 Tab delimited textfile  with TIN score calculated for each gene/transcript/any other feature specified in the input.
 An example is given below.
 
-    target_id       eff_length  S1_count    S1_exp_tin  S1_obs_tin
+    target_id       eff_length  S1_count S1_exp_tin  S1_obs_tin
     PF3D7_0102700	1683	    670	        100.0	    70.9
     PF3D7_0103700	1624	    135	        100.0	    72.8
     PF3D7_0107300	1581	    4508        100.0	    70.4
@@ -33,11 +33,11 @@ An example is given below.
 
 **How to install the script?**
 
-step1: Install script
+Step1: Install script
 
     pip install tincheck --upgrade
 
-step2 :Install additional requirements
+Step2 :Install additional requirements
     
     conda install --file conda-requirements.txt
 
