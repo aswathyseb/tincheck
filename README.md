@@ -2,7 +2,7 @@
 
 Tincheck is a python package to calculate transcript Integrity Number (TIN) and Transcription overlap.
 
-Transcripts with transcription overlap or uneven coverage can result in false positives in differential expression analysis.
+Transcripts with uneven coverage or transcription overlap can result in false positives in differential expression analysis.
 Transcript Integrity Number is a metric that calculates coverage evenness and can be used as a filtering criteria in RNA-Seq studies to improve the accuracy of results.
 
 ### Quick Start
