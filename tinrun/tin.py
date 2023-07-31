@@ -85,7 +85,7 @@ def get_counts(bam, ann, strand="", feat="exon", groupby="gene", paired=False, f
     countsfile = os.path.join(TMP, countsfile)
 
     # Set paired end or single end.
-    pflag = '-p' if paired else ""
+    pflag = '-p --countReadPairs' if paired else ""
 
     group_attr = "gene_id" if feat == "intergenic" else groupby
 
@@ -96,7 +96,7 @@ def get_counts(bam, ann, strand="", feat="exon", groupby="gene", paired=False, f
         sflag = '-s 2' if strand == "sense" else '-s 1'
 
     # Make the command.
-    cmd = f'featureCounts --primary -M {pflag} {sflag} -t {feat} -O -g {group_attr} -a {ann} -o {countsfile} {bam} 2>>{log}'
+    cmd = f'featureCounts --primary -O -M {pflag} {sflag} -t {feat}  -g {group_attr} -a {ann} -o {countsfile} {bam} 2>>{log}'
 
     # print(cmd)
 
@@ -408,7 +408,7 @@ def get_depth(bam, bed, strand='sense', flag=""):
     outfile = os.path.join(TMP, outfile)
 
     # Command to get the depth.
-    cmd2 = f'bedtools coverage -d -a {bed} -b {bam} {lib_strand} | cut -f 4,8 > {outfile}'
+    cmd2 = f'bedtools coverage -split -d -a {bed} -b {bam} {lib_strand} | cut -f 4,8 > {outfile}'
     # print(cmd2)
 
     d = subprocess.run(cmd2, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True,
@@ -459,11 +459,13 @@ def get_tin(depth_file, bgfile="", size=50):
 
         if uid != curr:
             fid, tlen, bg, obs_tin, exp_tin = calculate_tin(coverages=covs, background=background, uid=curr, size=size)
+
             store[fid] = (tlen, bg, obs_tin, exp_tin)
             curr = uid
             covs = dict()
 
         covs.setdefault(uid, []).append(depth)
+
 
     # Print the last element
     fid, tlen, bg, obs_tin, exp_tin = calculate_tin(coverages=covs, background=background, uid=uid, size=size)
@@ -535,7 +537,7 @@ def tin_score(cvg, size=50):
 
     if not cvg:
         tin = 0.0
-        return tin, eff_len, 0
+        return tin, 0, eff_len
 
     # Calculate shannon's entropy
     ent = shannon_entropy(cvg)
